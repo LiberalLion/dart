@@ -203,7 +203,9 @@ class ReportMissionView(View):
         io_stream = generate_report_or_attachments(mission_id, zip_attachments=False)
 
         response = HttpResponse(io_stream.getvalue(), content_type='text/plain')
-        response['Content-Disposition'] = 'attachment; filename={}_mission_report.docx'.format(mission_id)
+        response[
+            'Content-Disposition'
+        ] = f'attachment; filename={mission_id}_mission_report.docx'
         #response['Content-Disposition'] = 'attachment; filename={}_mission_report.zip'.format(mission_id)
         return response
 
@@ -219,7 +221,9 @@ class ReportAttachmentsMissionView(View):
         io_stream = generate_report_or_attachments(mission_id, zip_attachments=True)
 
         response = HttpResponse(io_stream.getvalue(), content_type='application/octet-stream')
-        response['Content-Disposition'] = 'attachment; filename={}_supporting_data.zip'.format(mission_id)
+        response[
+            'Content-Disposition'
+        ] = f'attachment; filename={mission_id}_supporting_data.zip'
         return response
 
 
@@ -261,8 +265,7 @@ class OrderMissionTestsView(View):
         # Ensure the received value is just ints
         try:
             data = json.loads(request.body)
-            for i in data['order']:
-                new_order.append(int(i))
+            new_order.extend(int(i) for i in data['order'])
         except ValueError:
             logger.exception('POST: OrderMissionTestsView received non-ints')
             raise  # Maybe do something else here one day
@@ -530,8 +533,7 @@ class OrderMissionTestsSupportingDataView(View):
         # Ensure the received value is just ints
         try:
             data = json.loads(request.body)
-            for i in data['order']:
-                new_order.append(int(i))
+            new_order.extend(int(i) for i in data['order'])
         except ValueError:
             logger.exception('POST: OrderMissionTestsSupportingDataView received non-ints')
             raise
@@ -566,7 +568,7 @@ class DownloadSupportingDataView(View):
 
         filename = supporting_data_object.filename()
         response = HttpResponse(supporting_data_object.test_file.file, content_type='text/plain')
-        response['Content-Disposition'] = 'attachment; filename=%s' % filename
+        response['Content-Disposition'] = f'attachment; filename={filename}'
         return response
 
 
@@ -601,18 +603,16 @@ class CreateAccountView(TemplateView):
 
     def post(self, request):
 
-        # This view can only process posts if there are *no* configured accounts whatsoever
         if self.any_accounts_configured():
             return redirect('logout')
-        else:
-            User = get_user_model()
+        User = get_user_model()
 
-            username = request.POST['username']
-            password = request.POST['password']
+        username = request.POST['username']
+        password = request.POST['password']
 
-            User.objects.create_superuser(username, username + '@dart.local', password)
+        User.objects.create_superuser(username, f'{username}@dart.local', password)
 
-            return redirect('login')
+        return redirect('login')
 
 
 class EditMissionHostsView(TemplateView):
@@ -706,12 +706,8 @@ def mission_host_handler(request, host_id):
             target_set = host.target_set.all()
             source_set = host.source_set.all()
 
-            combined_set = list(chain(target_set, source_set))
-
-            if len(combined_set) > 0:
-                test_ids = set()
-                for test in combined_set:
-                    test_ids.add(str(test.pk))
+            if combined_set := list(chain(target_set, source_set)):
+                test_ids = {str(test.pk) for test in combined_set}
                 error_message = "Host {host} is currently listed as a source or target on one or more test cases. " \
                                 "Please remove the host from the following test cases: {ids}".format(
                                     host=host.pk,
@@ -724,16 +720,12 @@ def mission_host_handler(request, host_id):
                 host.delete()
                 return JsonResponse(ReturnStatus(message='OK', data={"pk": host_id}).to_dict())
         except Host.DoesNotExist:
-            error_message = 'Tried to delete {}, but there is no such host.'.format(
-                host_id
-            )
+            error_message = f'Tried to delete {host_id}, but there is no such host.'
             logger.debug(error_message)
             return JsonResponse(ReturnStatus(False, error_message).to_dict(), status=BAD_REQUEST)
 
         except ValueError:
-            error_message = 'Tried to delete {}, but there was a problem.'.format(
-                host_id
-            )
+            error_message = f'Tried to delete {host_id}, but there was a problem.'
             logger.debug(error_message)
             return JsonResponse(ReturnStatus(False, error_message).to_dict())
 
@@ -751,46 +743,41 @@ def test_host_handler(request, mission_id, test_id):
             logger.debug(error_message)
             return JsonResponse(ReturnStatus(False, error_message).to_dict())
 
-        data = []
-
-        for host in testcase.target_hosts.all():
-            data.append(
-                {
-                    'id': host.id,
-                    'is_no_hit': host.is_no_hit,
-                    'mission': host.mission.pk,
-                    'host_name': conditional_escape(host.host_name),
-                    'role': 'target',
-                    'display': conditional_escape(host)
-                }
-            )
-
-        for host in testcase.source_hosts.all():
-            data.append(
-                {
-                    'id': host.id,
-                    'is_no_hit': host.is_no_hit,
-                    'mission': host.mission.pk,
-                    'host_name': conditional_escape(host.host_name),
-                    'role': 'source',
-                    'display': conditional_escape(host),
-                }
-            )
-
+        data = [
+            {
+                'id': host.id,
+                'is_no_hit': host.is_no_hit,
+                'mission': host.mission.pk,
+                'host_name': conditional_escape(host.host_name),
+                'role': 'target',
+                'display': conditional_escape(host),
+            }
+            for host in testcase.target_hosts.all()
+        ]
+        data.extend(
+            {
+                'id': host.id,
+                'is_no_hit': host.is_no_hit,
+                'mission': host.mission.pk,
+                'host_name': conditional_escape(host.host_name),
+                'role': 'source',
+                'display': conditional_escape(host),
+            }
+            for host in testcase.source_hosts.all()
+        )
         unassigned_hosts = Host.objects.filter(mission=testcase.mission)
 
-        for host in unassigned_hosts.all():
-            data.append(
-                {
-                    'id': host.id,
-                    'is_no_hit': host.is_no_hit,
-                    'mission': host.mission.pk,
-                    'host_name': conditional_escape(host.host_name),
-                    'role': '',
-                    'display': conditional_escape(host),
-                }
-            )
-
+        data.extend(
+            {
+                'id': host.id,
+                'is_no_hit': host.is_no_hit,
+                'mission': host.mission.pk,
+                'host_name': conditional_escape(host.host_name),
+                'role': '',
+                'display': conditional_escape(host),
+            }
+            for host in unassigned_hosts.all()
+        )
         status = ReturnStatus()
         status.data = data
 
@@ -807,42 +794,41 @@ def test_host_handler(request, mission_id, test_id):
                     role = data['role']
                 except KeyError:
                     error_message = 'Missing required key'
-                    logger.debug('test_host_handler POST ' + error_message)
+                    logger.debug(f'test_host_handler POST {error_message}')
                     return JsonResponse(ReturnStatus(False, error_message).to_dict())
 
                 try:
                     host = Host.objects.get(pk=host_id)
                 except Host.DoesNotExist:
                     error_message = 'No such host'
-                    logger.debug('test_host_handler POST ' + error_message)
+                    logger.debug(f'test_host_handler POST {error_message}')
                     return JsonResponse(ReturnStatus(False, error_message).to_dict())
 
                 try:
                     testcase = TestDetail.objects.get(pk=test_id)
                 except TestDetail.DoesNotExist:
                     error_message = 'No such test case'
-                    logger.debug('test_host_handler POST ' + error_message)
+                    logger.debug(f'test_host_handler POST {error_message}')
                     return JsonResponse(ReturnStatus(False, error_message).to_dict())
 
                 if host.mission != testcase.mission:
                     error_message = 'Host not in mission scope'
-                    logger.debug('test_host_handler POST ' + error_message)
+                    logger.debug(f'test_host_handler POST {error_message}')
                     return JsonResponse(ReturnStatus(False, error_message).to_dict())
 
                 if host.is_no_hit:
                     error_message = 'Host is on the no hit list'
-                    logger.debug('test_host_handler POST ' + error_message)
+                    logger.debug(f'test_host_handler POST {error_message}')
                     return JsonResponse(ReturnStatus(False, error_message).to_dict())
 
-                if role == 'target':
-                    testcase.target_hosts.add(host)
-                elif role == 'source':
+                if role == 'source':
                     testcase.source_hosts.add(host)
 
-                logger.debug('test_host_handler POST added host {} to testcase {}'.format(
-                    host.pk,
-                    testcase.pk,
-                ))
+                elif role == 'target':
+                    testcase.target_hosts.add(host)
+                logger.debug(
+                    f'test_host_handler POST added host {host.pk} to testcase {testcase.pk}'
+                )
 
                 return JsonResponse(ReturnStatus(True, "OK").to_dict())
 
@@ -912,7 +898,6 @@ def business_area_handler(request, pk):
         if pk is None:
             # New business area
             BusinessArea.objects.create(name=data['name'])
-            return JsonResponse(ReturnStatus(True, 'OK').to_dict())
         else:
             # existing business area update
             try:
@@ -921,7 +906,7 @@ def business_area_handler(request, pk):
                 ba.save()
             except BusinessArea.DoesNotExist:
                 return JsonResponse(ReturnStatus(False, 'Key does not exist').to_dict())
-            return JsonResponse(ReturnStatus(True, 'OK').to_dict())
+        return JsonResponse(ReturnStatus(True, 'OK').to_dict())
     elif request.method == 'DELETE':
         try:
             ba = BusinessArea.objects.get(pk=pk)
@@ -959,7 +944,6 @@ def classification_handler(request, pk):
                 )
             except Color.DoesNotExist:
                 return JsonResponse(ReturnStatus(False, 'One or more of the selected colors does not exist.').to_dict())
-            return JsonResponse(ReturnStatus(True, 'OK').to_dict())
         else:
             # existing classification update
             try:
@@ -979,8 +963,7 @@ def classification_handler(request, pk):
 
             except ClassificationLegend.DoesNotExist:
                 return JsonResponse(ReturnStatus(False, 'Key does not exist').to_dict())
-            return JsonResponse(ReturnStatus(True, 'OK').to_dict())
-
+        return JsonResponse(ReturnStatus(True, 'OK').to_dict())
     elif request.method == 'DELETE':
         try:
             classification = ClassificationLegend.objects.get(pk=pk)
@@ -1012,7 +995,6 @@ def color_handler(request, pk):
                 )
             except Color.DoesNotExist:
                 return JsonResponse(ReturnStatus(False, 'One or more of the selected colors does not exist.').to_dict())
-            return JsonResponse(ReturnStatus(True, 'OK').to_dict())
         else:
             # existing color update
             try:
@@ -1030,14 +1012,13 @@ def color_handler(request, pk):
 
             except Color.DoesNotExist:
                 return JsonResponse(ReturnStatus(False, 'Key does not exist').to_dict())
-            return JsonResponse(ReturnStatus(True, 'OK').to_dict())
-
+        return JsonResponse(ReturnStatus(True, 'OK').to_dict())
     elif request.method == 'DELETE':
         try:
             color = Color.objects.get(pk=pk)
             active_text_color = DARTDynamicSettings.objects.get_as_object().system_classification.text_color
             active_background_color = DARTDynamicSettings.objects.get_as_object().system_classification.background_color
-            if color == active_text_color or color == active_background_color:
+            if color in [active_text_color, active_background_color]:
                 return JsonResponse(ReturnStatus(False, 'Can not delete a color in use by the classification legend the system is currently operating at. Change system classification or color options and try again.').to_dict())
             color.delete()
 

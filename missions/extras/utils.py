@@ -55,7 +55,7 @@ class ReturnStatus(object):
         return self.__dict__
 
     def __str__(self):
-        return str(self.success) + ': ' + str(self.message)
+        return f'{str(self.success)}: {str(self.message)}'
 
 
 def copy_table(document, table, cut=False):

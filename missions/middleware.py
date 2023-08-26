@@ -51,21 +51,22 @@ class RequiredInterstitial(object):
             return None
         try:
             if display_interval == 0 \
-                    and request.session['last_acknowledged_interstitial']:
+                        and request.session['last_acknowledged_interstitial']:
                 return None
-            else:
-                max_age = timedelta(hours=display_interval).total_seconds()
-                if timegm(now().timetuple()) - request.session['last_acknowledged_interstitial'] < max_age:
-                    return None
+            max_age = timedelta(hours=display_interval).total_seconds()
+            if timegm(now().timetuple()) - request.session['last_acknowledged_interstitial'] < max_age:
+                return None
 
         except KeyError:
             pass
 
         path = request.get_full_path()
-        if re.match(str(reverse_lazy('login-interstitial')), path) or \
-            re.match(str(reverse_lazy('login')), path) or \
-            re.match(str(reverse_lazy('logout')), path) or \
-            re.match(settings.STATIC_URL + r'.+', path):
+        if (
+            re.match(str(reverse_lazy('login-interstitial')), path)
+            or re.match(str(reverse_lazy('login')), path)
+            or re.match(str(reverse_lazy('logout')), path)
+            or re.match(f'{settings.STATIC_URL}.+', path)
+        ):
             return None
 
         return redirect('login-interstitial')

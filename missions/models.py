@@ -70,8 +70,7 @@ class Mission(models.Model):
     def get_default_text(file_name):
         TEMPALTE_DIR = os.path.join(settings.BASE_DIR, 'templates')
         with open(os.path.join(TEMPALTE_DIR, file_name), 'r') as template:
-            output = join_as_compacted_paragraphs(template.readlines())
-            return output
+            return join_as_compacted_paragraphs(template.readlines())
 
     # Model Fields
 
@@ -215,7 +214,7 @@ class Mission(models.Model):
     )
 
     def __str__(self):
-        return "%s (%s)" % (self.mission_name, self.mission_number)
+        return f"{self.mission_name} ({self.mission_number})"
 
 
 class Host(models.Model):
@@ -240,8 +239,7 @@ class Host(models.Model):
 
     @staticmethod
     def get_host_output_format_string():
-        format_string = str(DARTDynamicSettings.objects.get_as_object().host_output_format)
-        return format_string
+        return str(DARTDynamicSettings.objects.get_as_object().host_output_format)
 
     def __str__(self):
         format_string = cache.get('host_output_format_string')
@@ -495,10 +493,10 @@ class TestDetail(models.Model):
         return len(SupportingData.objects.filter(test_detail=self.pk))
 
     def __str__(self):
-        return "%s (%s)" % (self.test_objective, self.id)
+        return f"{self.test_objective} ({self.id})"
 
     def save(self, *args, **kwargs):
-        self.has_findings = True if len(self.findings) > 0 else False
+        self.has_findings = len(self.findings) > 0
         return super(TestDetail, self).save(*args, **kwargs)
 
 

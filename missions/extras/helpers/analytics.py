@@ -157,12 +157,10 @@ class MissionAnalytics(object):
         # Build a hashmap of week # and the associated count
         zero_indexed_phase_count_by_week = []
 
-        header_row = list()
-        header_row.append('')
+        header_row = ['']
         header_row.extend(range(1, week_delta))
 
-        total_row = list()
-        total_row.append('TOTAL')
+        total_row = ['TOTAL']
         total_row.extend([0] * week_delta)
 
         for phase_tuple in TestDetail.ATTACK_PHASES:

@@ -31,7 +31,6 @@ class TestSortingHelper(object):
 
         mission_model = Mission.objects.get(pk=mission_id)
         sort_order = json.loads(mission_model.testdetail_sort_order)
-        deconflicted_sort_order = []
         sort_order_dirty = False
 
         if not tests:
@@ -52,6 +51,7 @@ class TestSortingHelper(object):
         logger.debug('TC Deconflict is reconciling sort order with the database (mission {mission})'
                     .format(mission=mission_id))
         test_ids_from_db = [test.id for test in tests]
+        deconflicted_sort_order = []
         for x in sort_order:
             if x in test_ids_from_db:
                 deconflicted_sort_order.append(x)
@@ -71,10 +71,9 @@ class TestSortingHelper(object):
         if sort_order_dirty:
             mission_model.testdetail_sort_order = json.dumps(deconflicted_sort_order)
             mission_model.save(update_fields=['testdetail_sort_order'])
-            logger.info('Reconciliation Performed (Mission %s): '
-                        'Mission Sort Order: %s; '
-                        'Database TC Records: %s; '
-                        'Result of Deconflict: %s' % (mission_id, sort_order, test_ids_from_db, deconflicted_sort_order))
+            logger.info(
+                f'Reconciliation Performed (Mission {mission_id}): Mission Sort Order: {sort_order}; Database TC Records: {test_ids_from_db}; Result of Deconflict: {deconflicted_sort_order}'
+            )
 
         return deconflicted_sort_order
 
@@ -87,7 +86,6 @@ class TestSortingHelper(object):
 
         testdetail_model = TestDetail.objects.get(pk=testdetail_id)
         sort_order = json.loads(testdetail_model.supporting_data_sort_order)
-        deconflicted_sort_order = []
         sort_order_dirty = False
 
         # Preserve existing sort order and build the testdetail_sort_order field
@@ -100,6 +98,7 @@ class TestSortingHelper(object):
         logger.debug('Supporting Data Deconflict is reconciling sort order with the database (testdetail {testdetail})'
                      .format(testdetail=testdetail_id))
         data_ids_from_db = [data.id for data in testdata]
+        deconflicted_sort_order = []
         for x in sort_order:
             if x in data_ids_from_db:
                 deconflicted_sort_order.append(x)
@@ -119,10 +118,9 @@ class TestSortingHelper(object):
         if sort_order_dirty:
             testdetail_model.supporting_data_sort_order = json.dumps(deconflicted_sort_order)
             testdetail_model.save(update_fields=['supporting_data_sort_order'])
-            logger.info('Reconciliation Performed (TestDetail %s): '
-                        'TestDetail Supporting Data Sort Order: %s; '
-                        'Suppporting Data from Database: %s; '
-                        'Result of Deconflict: %s' % (testdetail_id, sort_order, data_ids_from_db, deconflicted_sort_order))
+            logger.info(
+                f'Reconciliation Performed (TestDetail {testdetail_id}): TestDetail Supporting Data Sort Order: {sort_order}; Suppporting Data from Database: {data_ids_from_db}; Result of Deconflict: {deconflicted_sort_order}'
+            )
 
         return deconflicted_sort_order
 
@@ -142,9 +140,11 @@ class TestSortingHelper(object):
             excluded_tests = tests.filter(test_case_include_flag=False).values_list('id', flat=True)
 
         test_dict = dict([(test.id, test) for test in tests])
-        ordered_tests = [test_dict[test_id] for test_id in sort_order if test_id not in excluded_tests]
-
-        return ordered_tests
+        return [
+            test_dict[test_id]
+            for test_id in sort_order
+            if test_id not in excluded_tests
+        ]
 
     @classmethod
     def get_ordered_supporting_data(cls, test_detail_id, reportable_supporting_data_only=False):
@@ -162,6 +162,8 @@ class TestSortingHelper(object):
             excluded_data = testdata.filter(include_flag=False).values_list('id', flat=True)
 
         testdata_dict = dict([(data.id, data) for data in testdata])
-        ordered_testdata = [testdata_dict[testdata_id] for testdata_id in sort_order if testdata_id not in excluded_data]
-
-        return ordered_testdata
+        return [
+            testdata_dict[testdata_id]
+            for testdata_id in sort_order
+            if testdata_id not in excluded_data
+        ]

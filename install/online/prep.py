@@ -44,10 +44,12 @@ class DartOfflinePrepper(object):
     def __init__(self, *args, **kwargs):
 
         self.PROXY = kwargs.get('proxy', None)
-        logger.warn('Proxy: {}'.format(self.PROXY))
+        logger.warn(f'Proxy: {self.PROXY}')
 
         self.BYPASS_CERTIFICATE_VALIDATION = kwargs.get('insecure', False)
-        logger.warn('Bypassing certificate validation: {}'.format(self.BYPASS_CERTIFICATE_VALIDATION))
+        logger.warn(
+            f'Bypassing certificate validation: {self.BYPASS_CERTIFICATE_VALIDATION}'
+        )
 
         self.PYTHON_DOWNLOAD_URL = 'https://www.python.org/ftp/python/2.7.12/python-2.7.12.amd64.msi'
         self.VCPYTHON27_DOWNLOAD_URL = 'https://download.microsoft.com/download/7/9/6/796EF2E4-801B-4FC4-AB28-B59FBF6D907B/VCForPython27.msi'

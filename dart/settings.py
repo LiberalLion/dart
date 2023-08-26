@@ -116,9 +116,9 @@ MEDIA_URL = '/data/'
 
 # Bootstrap Settings
 BOOTSTRAP3 = {
-    'css_url': STATIC_URL + 'base/css/bootstrap.min.css',
-    'javascript_url': STATIC_URL + 'base/js/bootstrap.min.js',
-    'jquery_url': STATIC_URL + 'base/js/jquery.min.js',
+    'css_url': f'{STATIC_URL}base/css/bootstrap.min.css',
+    'javascript_url': f'{STATIC_URL}base/js/bootstrap.min.js',
+    'jquery_url': f'{STATIC_URL}base/js/jquery.min.js',
     'required_css_class': 'required',
 }
 
